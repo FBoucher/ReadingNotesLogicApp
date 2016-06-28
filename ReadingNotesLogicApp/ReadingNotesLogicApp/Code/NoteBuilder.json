@@ -1,182 +1,205 @@
 ﻿{
-  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2015-08-01-preview/workflowdefinition.json#",
-  "actions": {
-    "Config_Get": {
-      "conditions": [
-        {
-          "dependsOn": "Create_file_2"
-        }
-      ],
-      "inputs": {
-        "method": "get",
-        "uri": "https://readingnotesapiapp.azurewebsites.net/api/Config"
-      },
-      "metadata": {
-        "apiDefinitionUrl": "https://readingnotesapiapp.azurewebsites.net/swagger/docs/v1",
-        "swaggerSource": "website"
-      },
-      "type": "Http"
-    },
-    "Create_file": {
-      "conditions": [
-        {
-          "dependsOn": "ReadingNotes_BuildReadingNotes"
-        }
-      ],
-      "inputs": {
-        "body": "@concat('All content done\n',length(body('MyClippings_ArrayKindleClippingsAfter')))",
-        "host": {
-          "api": {
-            "runtimeUrl": "https://logic-apis-eastus.azure-apim.net/apim/azureblob"
-          },
-          "connection": {
-            "name": "@parameters('$connections')['azureblob']['connectionId']"
-          }
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2015-08-01-preview/workflowdefinition.json#",
+    "actions": {
+        "Config_Get": {
+            "conditions": [
+                {
+                    "dependsOn": "Delete_file"
+                }
+            ],
+            "inputs": {
+                "method": "get",
+                "uri": "https://readingnotesapiapp.azurewebsites.net/api/Config"
+            },
+            "metadata": {
+                "apiDefinitionUrl": "https://readingnotesapiapp.azurewebsites.net/swagger/docs/v1",
+                "swaggerSource": "website"
+            },
+            "type": "Http"
         },
-        "method": "post",
-        "path": "/datasets/default/files",
-        "queries": {
-          "folderPath": "/clippings",
-          "name": "Summary_@{body('GenerateRandomNumber')}.txt"
-        }
-      },
-      "type": "ApiConnection"
-    },
-    "Create_file_2": {
-      "conditions": [ ],
-      "inputs": {
-        "body": "@triggerBody()",
-        "host": {
-          "api": {
-            "runtimeUrl": "https://logic-apis-eastus.azure-apim.net/apim/azureblob"
-          },
-          "connection": {
-            "name": "@parameters('$connections')['azureblob']['connectionId']"
-          }
+        "Config_IncrementCounter": {
+            "conditions": [
+                {
+                    "dependsOn": "Create_file"
+                }
+            ],
+            "inputs": {
+                "method": "post",
+                "uri": "https://readingnotesapiapp.azurewebsites.net/IncrementCounter"
+            },
+            "metadata": {
+                "apiDefinitionUrl": "https://readingnotesapiapp.azurewebsites.net/swagger/docs/v1",
+                "swaggerSource": "website"
+            },
+            "type": "Http"
         },
-        "method": "post",
-        "path": "/datasets/default/files",
-        "queries": {
-          "folderPath": "/clippings",
-          "name": "@{triggerOutputs()['headers']['x-ms-file-name']}"
-        }
-      },
-      "type": "ApiConnection"
-    },
-    "GenerateRandomNumber": {
-      "conditions": [
-        {
-          "dependsOn": "NotesChild"
-        }
-      ],
-      "inputs": {
-        "body": {
-          "test": "test"
+        "Create_file": {
+            "conditions": [
+                {
+                    "dependsOn": "ReadingNotes_BuildReadingNotes"
+                }
+            ],
+            "inputs": {
+                "body": "@concat('All content done\n',length(body('MyClippings_ArrayKindleClippingsAfter')))",
+                "host": {
+                    "api": {
+                        "runtimeUrl": "https://logic-apis-eastus.azure-apim.net/apim/azureblob"
+                    },
+                    "connection": {
+                        "name": "@parameters('$connections')['azureblob']['connectionId']"
+                    }
+                },
+                "method": "post",
+                "path": "/datasets/default/files",
+                "queries": {
+                    "folderPath": "/clippings",
+                    "name": "Summary_@{body('Config_Get')?['reading_notes_counter']}.txt"
+                }
+            },
+            "type": "ApiConnection"
         },
-        "function": {
-          "id": "/subscriptions/e09cc50e-c94d-49b8-8dfd-404f6592ef1b/resourceGroups/notetest/providers/Microsoft.Web/sites/ExtractTags/functions/GenerateRandomNumber"
-        }
-      },
-      "type": "Function"
-    },
-    "MyClippings_ArrayKindleClippingsAfter": {
-      "conditions": [
-        {
-          "dependsOn": "Config_Get"
-        }
-      ],
-      "inputs": {
-        "method": "get",
-        "queries": {
-          "StartDate": "@{body('Config_Get')?['last_bookmark_date']}",
-          "containername": "clippings",
-          "filename": "@{triggerOutputs()['headers']['x-ms-file-name']}"
+        "Create_file_2": {
+            "conditions": [],
+            "inputs": {
+                "body": "@triggerBody()",
+                "host": {
+                    "api": {
+                        "runtimeUrl": "https://logic-apis-eastus.azure-apim.net/apim/azureblob"
+                    },
+                    "connection": {
+                        "name": "@parameters('$connections')['azureblob']['connectionId']"
+                    }
+                },
+                "method": "post",
+                "path": "/datasets/default/files",
+                "queries": {
+                    "folderPath": "/clippings",
+                    "name": "@{triggerOutputs()['headers']['x-ms-file-name']}"
+                }
+            },
+            "type": "ApiConnection"
         },
-        "uri": "https://myclippingsapiapp.azurewebsites.net/ArrayKindleClippingsAfter"
-      },
-      "metadata": {
-        "apiDefinitionUrl": "https://myclippingsapiapp.azurewebsites.net/swagger/docs/v1",
-        "swaggerSource": "website"
-      },
-      "type": "Http"
-    },
-    "NotesChild": {
-      "conditions": [
-        {
-          "dependsOn": "MyClippings_ArrayKindleClippingsAfter"
-        }
-      ],
-      "foreach": "@body('MyClippings_ArrayKindleClippingsAfter')",
-      "inputs": {
-        "body": {
-          "Request": {
-            "Author": "@{item()['Author']}",
-            "BookName": "@{item()['BookName']}",
-            "ClippingType": "@{item()['ClippingType']}",
-            "DateAdded": "@{item()['DateAdded']}",
-            "Note": "@{item()['Text']}"
-          }
+        "Delete_file": {
+            "conditions": [
+                {
+                    "dependsOn": "Create_file_2"
+                }
+            ],
+            "inputs": {
+                "host": {
+                    "api": {
+                        "runtimeUrl": "https://logic-apis-eastus.azure-apim.net/apim/onedrive"
+                    },
+                    "connection": {
+                        "name": "@parameters('$connections')['onedrive']['connectionId']"
+                    }
+                },
+                "method": "delete",
+                "path": "/datasets/default/files/@{encodeURIComponent(encodeURIComponent(string(triggerOutputs()['headers']?['x-ms-file-id'])))}"
+            },
+            "type": "ApiConnection"
         },
-        "host": {
-          "triggerName": "manual",
-          "workflow": {
-            "id": "/subscriptions/e09cc50e-c94d-49b8-8dfd-404f6592ef1b/resourceGroups/notetest/providers/Microsoft.Logic/workflows/NotesChild"
-          }
+        "MyClippings_ArrayKindleClippingsAfter": {
+            "conditions": [
+                {
+                    "dependsOn": "Config_Get"
+                }
+            ],
+            "inputs": {
+                "method": "get",
+                "queries": {
+                    "StartDate": "@{body('Config_Get')?['last_bookmark_date']}",
+                    "containername": "clippings",
+                    "filename": "@{triggerOutputs()['headers']['x-ms-file-name']}"
+                },
+                "uri": "https://myclippingsapiapp.azurewebsites.net/ArrayKindleClippingsAfter"
+            },
+            "metadata": {
+                "apiDefinitionUrl": "https://myclippingsapiapp.azurewebsites.net/swagger/docs/v1",
+                "swaggerSource": "website"
+            },
+            "type": "Http"
+        },
+        "NotesChild": {
+            "conditions": [
+                {
+                    "dependsOn": "MyClippings_ArrayKindleClippingsAfter"
+                }
+            ],
+            "foreach": "@body('MyClippings_ArrayKindleClippingsAfter')",
+            "inputs": {
+                "body": {
+                  "Request": {
+                    "Author": "@{item()['Author']}",
+                    "BookName": "@{item()['BookName']}",
+                    "ClippingType": "@{item()['ClippingType']}",
+                    "DateAdded": "@{item()['DateAdded']}",
+                    "Note": "@{item()['Text']}"
+                  }
+                },
+                "host": {
+                    "triggerName": "manual",
+                    "workflow": {
+                        "id": "/subscriptions/e09cc50e-c94d-49b8-8dfd-404f6592ef1b/resourceGroups/notetest/providers/Microsoft.Logic/workflows/NotesChild"
+                    }
+                }
+            },
+            "type": "Workflow"
+        },
+        "ReadingNotes_BuildReadingNotes": {
+            "conditions": [
+                {
+                    "dependsOn": "NotesChild"
+                }
+            ],
+            "inputs": {
+                "method": "get",
+                "queries": {
+                    "EditionNumber": "@{body('Config_Get')?['reading_notes_counter']}"
+                },
+                "uri": "https://readingnotesapiapp.azurewebsites.net/BuildReadingNotes"
+            },
+            "metadata": {
+                "apiDefinitionUrl": "https://readingnotesapiapp.azurewebsites.net/swagger/docs/v1",
+                "swaggerSource": "website"
+            },
+            "type": "Http"
         }
-      },
-      "type": "Workflow"
     },
-    "ReadingNotes_BuildReadingNotes": {
-      "conditions": [
-        {
-          "dependsOn": "GenerateRandomNumber"
+    "contentVersion": "1.0.0.0",
+    "outputs": {},
+    "parameters": {
+        "$connections": {
+            "defaultValue": {},
+            "type": "Object"
         }
-      ],
-      "inputs": {
-        "method": "get",
-        "uri": "https://readingnotesapiapp.azurewebsites.net/BuildReadingNotes"
-      },
-      "metadata": {
-        "apiDefinitionUrl": "https://readingnotesapiapp.azurewebsites.net/swagger/docs/v1",
-        "swaggerSource": "website"
-      },
-      "type": "Http"
+    },
+    "triggers": {
+        "When_a_file_is_created": {
+            "conditions": [],
+            "inputs": {
+                "host": {
+                    "api": {
+                        "runtimeUrl": "https://logic-apis-eastus.azure-apim.net/apim/onedrive"
+                    },
+                    "connection": {
+                        "name": "@parameters('$connections')['onedrive']['connectionId']"
+                    }
+                },
+                "method": "get",
+                "path": "/datasets/default/triggers/onnewfile",
+                "queries": {
+                    "folderId": "B612C98DD673F9C1!25832"
+                }
+            },
+            "metadata": {
+                "B612C98DD673F9C1!25832": "/dev/Notes"
+            },
+            "recurrence": {
+                "frequency": "Hour",
+                "interval": 1
+            },
+            "type": "ApiConnection"
+        }
     }
-  },
-  "contentVersion": "1.0.0.0",
-  "outputs": { },
-  "parameters": {
-    "$connections": {
-      "defaultValue": { },
-      "type": "Object"
-    }
-  },
-  "triggers": {
-    "When_a_file_is_created": {
-      "conditions": [ ],
-      "inputs": {
-        "host": {
-          "api": {
-            "runtimeUrl": "https://logic-apis-eastus.azure-apim.net/apim/onedrive"
-          },
-          "connection": {
-            "name": "@parameters('$connections')['onedrive']['connectionId']"
-          }
-        },
-        "method": "get",
-        "path": "/datasets/default/triggers/onnewfile",
-        "queries": {
-          "folderId": "B612C98DD673F9C1!25832"
-        }
-      },
-      "metadata": {
-        "B612C98DD673F9C1!25832": "/dev/Notes"
-      },
-      "recurrence": {
-        "frequency": "Hour",
-        "interval": 1
-      },
-      "type": "ApiConnection"
-    }
-  }
 }

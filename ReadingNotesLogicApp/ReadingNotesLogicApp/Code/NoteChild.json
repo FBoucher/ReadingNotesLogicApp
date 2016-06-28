@@ -1,146 +1,199 @@
 ﻿{
-  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2015-08-01-preview/workflowdefinition.json#",
-  "actions": {
-    "Create_file": {
-      "conditions": [
-        {
-          "dependsOn": "NoteToJSon"
-        }
-      ],
-      "inputs": {
-        "body": "@body('NoteToJSon')",
-        "host": {
-          "api": {
-            "runtimeUrl": "https://logic-apis-eastus.azure-apim.net/apim/azureblob"
-          },
-          "connection": {
-            "name": "@parameters('$connections')['azureblob']['connectionId']"
-          }
-        },
-        "method": "post",
-        "path": "/datasets/default/files",
-        "queries": {
-          "folderPath": "/jsonnotes",
-          "name": "@{triggerBody()['Request']['BookName']}.json"
-        }
-      },
-      "type": "ApiConnection"
-    },
-    "ExtractTags": {
-      "conditions": [
-        {
-          "dependsOn": "Readability_SearchByTitle"
-        }
-      ],
-      "inputs": {
-        "body": {
-          "note": "@{triggerBody()['Request']['Note']}"
-        },
-        "function": {
-          "id": "/subscriptions/e09cc50e-c94d-49b8-8dfd-404f6592ef1b/resourceGroups/notetest/providers/Microsoft.Web/sites/ExtractTags/functions/ExtractTags"
-        }
-      },
-      "type": "Function"
-    },
-    "NoteToJSon": {
-      "conditions": [
-        {
-          "dependsOn": "ExtractTags"
-        }
-      ],
-      "inputs": {
-        "body": {
-          "Author": "@{triggerBody()['Request']['Author']}",
-          "Comment": "@body('ExtractTags')['cleanNote']",
-          "DateAdded": "@{triggerBody()['Request']['DateAdded']}",
-          "Tags": "@body('ExtractTags')['tags']",
-          "Title": "@{triggerBody()['Request']['BookName']}",
-          "Url": "@coalesce(body('Readability_SearchByTitle')?['<Article>k__BackingField']?['<Url>k__BackingField'],'no-url')"
-        },
-        "function": {
-          "id": "/subscriptions/e09cc50e-c94d-49b8-8dfd-404f6592ef1b/resourceGroups/notetest/providers/Microsoft.Web/sites/ExtractTags/functions/NoteToJSon"
-        }
-      },
-      "type": "Function"
-    },
-    "Readability_SearchByTitle": {
-      "conditions": [ ],
-      "inputs": {
-        "method": "get",
-        "queries": {
-          "PublishDate": "@{triggerBody()['Request']['DateAdded']}",
-          "Title": "@{triggerBody()['Request']['BookName']}"
-        },
-        "uri": "https://readabilityapiapp.azurewebsites.net/SearchByTitle"
-      },
-      "metadata": {
-        "apiDefinitionUrl": "https://readabilityapiapp.azurewebsites.net/swagger/docs/v1",
-        "swaggerSource": "website"
-      },
-      "type": "Http"
-    },
-    "Response": {
-      "conditions": [
-        {
-          "dependsOn": "Create_file"
-        }
-      ],
-      "inputs": {
-        "body": "The file was updated.",
-        "statusCode": 200
-      },
-      "type": "Response"
-    }
-  },
-  "contentVersion": "1.0.0.0",
-  "outputs": { },
-  "parameters": {
-    "$connections": {
-      "defaultValue": { },
-      "type": "Object"
-    }
-  },
-  "triggers": {
-    "manual": {
-      "inputs": {
-        "schema": {
-          "$schema": "http://json-schema.org/draft-04/schema#",
-          "properties": {
-            "Request": {
-              "properties": {
-                "Author": {
-                  "type": "string"
-                },
-                "BookName": {
-                  "type": "string"
-                },
-                "ClippingType": {
-                  "type": "string"
-                },
-                "DateAdded": {
-                  "type": "string"
-                },
-                "Note": {
-                  "type": "string"
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2015-08-01-preview/workflowdefinition.json#",
+    "actions": {
+        "Config_Get": {
+            "conditions": [
+                {
+                    "dependsOn": "Create_file"
                 }
+            ],
+            "inputs": {
+                "method": "get",
+                "uri": "https://readingnotesapiapp.azurewebsites.net/api/Config"
+            },
+            "metadata": {
+                "apiDefinitionUrl": "https://readingnotesapiapp.azurewebsites.net/swagger/docs/v1",
+                "swaggerSource": "website"
+            },
+            "type": "Http"
+        },
+        "Config_Post": {
+            "conditions": [
+                {
+                    "dependsOn": "KeepMostRecentDate"
+                }
+            ],
+            "inputs": {
+                "body": {
+                    "last_bookmark_date": "@{body('KeepMostRecentDate')?['lastestDate']}",
+                    "reading_notes_counter": "@body('Config_Get')?['reading_notes_counter']"
+                },
+                "method": "post",
+                "uri": "https://readingnotesapiapp.azurewebsites.net/api/Config"
+            },
+            "metadata": {
+                "apiDefinitionUrl": "https://readingnotesapiapp.azurewebsites.net/swagger/docs/v1",
+                "swaggerSource": "website"
+            },
+            "type": "Http"
+        },
+        "Create_file": {
+            "conditions": [
+                {
+                    "dependsOn": "NoteToJSon"
+                }
+            ],
+            "inputs": {
+                "body": "@body('NoteToJSon')",
+                "host": {
+                    "api": {
+                        "runtimeUrl": "https://logic-apis-eastus.azure-apim.net/apim/azureblob"
+                    },
+                    "connection": {
+                        "name": "@parameters('$connections')['azureblob']['connectionId']"
+                    }
+                },
+                "method": "post",
+                "path": "/datasets/default/files",
+                "queries": {
+                    "folderPath": "/jsonnotes",
+                    "name": "@{triggerBody()['Request']['BookName']}.json"
+                }
+            },
+            "type": "ApiConnection"
+        },
+        "ExtractTags": {
+            "conditions": [
+                {
+                    "dependsOn": "Readability_SearchByTitle"
+                }
+            ],
+            "inputs": {
+                "body": {
+                    "note": "@{triggerBody()['Request']['Note']}"
+                },
+                "function": {
+                    "id": "/subscriptions/e09cc50e-c94d-49b8-8dfd-404f6592ef1b/resourceGroups/notetest/providers/Microsoft.Web/sites/ExtractTags/functions/ExtractTags"
+                }
+            },
+            "type": "Function"
+        },
+        "KeepMostRecentDate": {
+            "conditions": [
+                {
+                    "dependsOn": "Config_Get"
+                }
+            ],
+            "inputs": {
+                "body": {
+                    "lastDate": "@{body('Config_Get')?['last_bookmark_date']}",
+                    "newDate": "@{triggerBody()['Request']['DateAdded']}"
+                },
+                "function": {
+                    "id": "/subscriptions/e09cc50e-c94d-49b8-8dfd-404f6592ef1b/resourceGroups/notetest/providers/Microsoft.Web/sites/ExtractTags/functions/KeepMostRecentDate"
+                }
+            },
+            "type": "Function"
+        },
+        "NoteToJSon": {
+            "conditions": [
+                {
+                    "dependsOn": "ExtractTags"
+                }
+            ],
+            "inputs": {
+              "body": {
+                "Author": "@{triggerBody()['Request']['Author']}",
+                "Comment": "@body('ExtractTags')['cleanNote']",
+                "DateAdded": "@{triggerBody()['Request']['DateAdded']}",
+                "Tags": "@body('ExtractTags')['tags']",
+                "Title": "@{triggerBody()['Request']['BookName']}",
+                "Url": "@coalesce(body('Readability_SearchByTitle')?['<Article>k__BackingField']?['<Url>k__BackingField'],'no-url')"
               },
-              "required": [
-                "BookName",
-                "Author",
-                "ClippingType",
-                "DateAdded",
-                "Note"
-              ],
-              "type": "object"
-            }
-          },
-          "required": [
-            "Request"
-          ],
-          "type": "object"
+                "function": {
+                    "id": "/subscriptions/e09cc50e-c94d-49b8-8dfd-404f6592ef1b/resourceGroups/notetest/providers/Microsoft.Web/sites/ExtractTags/functions/NoteToJSon"
+                }
+            },
+            "type": "Function"
+        },
+        "Readability_SearchByTitle": {
+            "conditions": [],
+            "inputs": {
+                "method": "get",
+                "queries": {
+                    "PublishDate": "@{triggerBody()['Request']['DateAdded']}",
+                    "Title": "@{triggerBody()['Request']['BookName']}"
+                },
+                "uri": "https://readabilityapiapp.azurewebsites.net/SearchByTitle"
+            },
+            "metadata": {
+                "apiDefinitionUrl": "https://readabilityapiapp.azurewebsites.net/swagger/docs/v1",
+                "swaggerSource": "website"
+            },
+            "type": "Http"
+        },
+        "Response": {
+            "conditions": [
+                {
+                    "dependsOn": "Config_Post"
+                }
+            ],
+            "inputs": {
+                "body": "The file was updated.",
+                "statusCode": 200
+            },
+            "type": "Response"
         }
-      },
-      "type": "Manual"
+    },
+    "contentVersion": "1.0.0.0",
+    "outputs": {},
+    "parameters": {
+        "$connections": {
+            "defaultValue": {},
+            "type": "Object"
+        }
+    },
+    "triggers": {
+        "manual": {
+            "inputs": {
+                "schema": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "properties": {
+                        "Request": {
+                            "properties": {
+                                "Author": {
+                                    "type": "string"
+                                },
+                                "BookName": {
+                                    "type": "string"
+                                },
+                                "ClippingType": {
+                                    "type": "string"
+                                },
+                                "DateAdded": {
+                                    "type": "string"
+                                },
+                                "Note": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "BookName",
+                                "Author",
+                                "ClippingType",
+                                "DateAdded",
+                                "Note"
+                            ],
+                            "type": "object"
+                        }
+                    },
+                    "required": [
+                        "Request"
+                    ],
+                    "type": "object"
+                }
+            },
+            "type": "Manual"
+        }
     }
-  }
 }
