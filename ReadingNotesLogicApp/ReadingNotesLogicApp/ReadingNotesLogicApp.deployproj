@@ -29,12 +29,24 @@
     <Folder Include="Templates\" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Code\NoteBuilder.json" />
+    <None Include="Code\NoteChild.json" />
     <None Include="Deployment.targets">
       <Visible>False</Visible>
     </None>
     <Content Include="Scripts\Deploy-AzureResourceGroup.ps1" />
     <Content Include="Templates\LogicAppAndAPIApp.json" />
     <Content Include="Templates\LogicAppAndAPIApp.parameters.json" />
+    <None Include="Functions\ExtractTags\function.json" />
+    <None Include="Functions\ExtractTags\run.csx" />
+    <None Include="Functions\ExtractTags\TestOutput.json" />
+    <None Include="Functions\GenerateRandomNumber\function.json" />
+    <None Include="Functions\GenerateRandomNumber\index.js" />
+    <None Include="Functions\GenerateRandomNumber\TestOutput.json" />
+    <None Include="Functions\KeepMostRecentDate\function.json" />
+    <None Include="Functions\KeepMostRecentDate\run.csx" />
+    <None Include="Functions\NoteToJSon\function.json" />
+    <None Include="Functions\NoteToJSon\index.js" />
   </ItemGroup>
   <Target Name="GetReferenceAssemblyPaths" />
 </Project>
